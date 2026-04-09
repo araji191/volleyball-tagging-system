@@ -1,5 +1,6 @@
 VolleyballDataset/
 videos/
+output/
 .vscode/
 
 *.pt
