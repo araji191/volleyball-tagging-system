@@ -1,4 +1,7 @@
 VolleyballDataset/
+VolleyballDataset_clean/
+static_outputs/
+temp_uploads/
 videos/
 output/
 .vscode/

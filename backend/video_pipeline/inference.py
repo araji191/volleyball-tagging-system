@@ -5,32 +5,25 @@ import torch
 import json
 from model.transformations import val_transform
 from model.cnn import CNN
+from video_pipeline.config import (
+    DEVICE, YOLO_MODEL_PATH, CNN_MODEL_PATH, 
+    CONF, IOU, CONFIDENCE_THRESHOLD, 
+    MIN_W, MIN_H, ACTION_CLASSES, CNN_INPUT_SIZE
+)
 
 # --- GLOBAL CONFIGURATION & MODEL LOADING ---
 # We load models globally so they only load ONCE when the Flask server starts.
-CONF        = 0.5
-IOU         = 0.5
-MIN_W       = 50
-MIN_H       = 100
-CONFIDENCE_THRESHOLD = 0.99
-ACTION_CLASSES = ["spike", "set", "serve", "defense", "block"]
-
-_device = (
-    "cuda" if torch.cuda.is_available() else
-    "mps"  if torch.backends.mps.is_available() else
-    "cpu"
-)
 
 # Load YOLO Model
-player_model = YOLO("yolov8m.pt")
+player_model = YOLO(YOLO_MODEL_PATH)
 
 # Load CNN Action Model
-checkpoint = torch.load("model/weights/action_model.pt", map_location=_device)
+checkpoint = torch.load(CNN_MODEL_PATH, map_location=DEVICE)
 _num_classes = checkpoint["network.19.weight"].shape[0]
-_action_model = CNN(num_classes=_num_classes).to(_device)
+_action_model = CNN(num_classes=_num_classes).to(DEVICE)
 
 # Initialize LazyLinear with a dummy forward pass before loading weights
-_dummy = torch.zeros(1, 3, 146, 32).to(_device)
+_dummy = torch.zeros(1, 3, CNN_INPUT_SIZE[0], CNN_INPUT_SIZE[1]).to(DEVICE)
 _ = _action_model(_dummy)
 _action_model.load_state_dict(checkpoint)
 _action_model.eval()
@@ -38,7 +31,7 @@ _action_model.eval()
 # --- HELPER FUNCTIONS ---
 
 def classify_action(tensor: torch.Tensor) -> str | None:
-    tensor = tensor.to(_device)
+    tensor = tensor.to(DEVICE)
     with torch.no_grad():
         logits = _action_model(tensor)
         probs  = torch.softmax(logits, dim=1)
