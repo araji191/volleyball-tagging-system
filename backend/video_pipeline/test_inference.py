@@ -1,240 +1,61 @@
 import cv2
 import os
+import json
 import torch
-from model.transformations import val_transform
-
-# Import configurations
-from video_pipeline.config import (
-    DEVICE, CONF, IOU, MIN_W, MIN_H, ACTION_CLASSES
-)
-
-# Import shared models and helpers from inference.py
+from video_pipeline.config import CONF, IOU, MIN_W, MIN_H
 from video_pipeline.inference import (
-    player_model, _action_model,
-    classify_action, crop_player, draw_label, deduplicate_actions
+    pose_model, classify_pose, extract_keypoints_and_boxes, 
+    draw_label, deduplicate_actions
 )
 
-INPUT_PATH  = "videos/back_view.mp4"
-OUTPUT_PATH = "output/back_view.mp4"
-
-actions = []
-
-cap = cv2.VideoCapture(INPUT_PATH)
-if not cap.isOpened():
-    raise ValueError(f"Cannot open video: {INPUT_PATH}")
-
-fps    = cap.get(cv2.CAP_PROP_FPS)
-width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-total  = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-out    = cv2.VideoWriter(OUTPUT_PATH, fourcc, fps, (width, height))
-
-if not os.path.isfile(INPUT_PATH):
-    raise FileNotFoundError(f"Input video not found: {INPUT_PATH}")
-
-os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+INPUT_PATH  = "./videos/rally.mp4"
+OUTPUT_PATH = "output/rally.mp4"
 
 def run_video_inference():
+    actions = []
+    cap = cv2.VideoCapture(INPUT_PATH)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    w, h = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    out = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter_fourcc(*"avc1"), fps, (w, h))
 
     frame_idx = 0
-    print(f"Processing {total} frames at {fps:.1f} fps → {OUTPUT_PATH}")
-
-    while True:
+    while cap.isOpened():
         ret, frame = cap.read()
-        if not ret:
-            break
+        if not ret: break
 
-        timestamp_sec = frame_idx / fps if fps else 0.0
+        ts = round(frame_idx / fps, 2)
+        results = pose_model(frame, conf=CONF, iou=IOU, classes=[0], verbose=False)
 
-        results = player_model(frame, conf=CONF, iou=IOU, 
-                       classes=[0],  # person class only
-                       verbose=False)
         for r in results:
-            boxes = r.boxes.xyxy.cpu()
-
-            for box in boxes:
-                x1, y1, x2, y2 = map(int, box)
-                w = x2 - x1
-                h = y2 - y1
-
-                if w < MIN_W or h < MIN_H:
-                    continue
-
-                tensor = crop_player(frame, x1, y1, x2, y2)
-                action = classify_action(tensor)
-
-                if action is not None:
-                    actions.append((frame_idx, action, round(timestamp_sec, 2)))
-
-                if action is not None:
-                    draw_label(frame, x1, y1, x2, y2, action.upper(), (0, 255, 0))
-                else:
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (100, 100, 100), 1)
+            kp, boxes = extract_keypoints_and_boxes(r)
+            if kp is not None:
+                action, conf_val = classify_pose(kp)
+                # Filter for largest person box
+                areas = [(b[2]-b[0])*(b[3]-b[1]) for b in boxes]
+                main_box = boxes[int(torch.argmax(torch.tensor(areas)))]
+                
+                bx1, by1, bx2, by2 = main_box
+                if (bx2-bx1) >= MIN_W and (by2-by1) >= MIN_H:
+                    if action:
+                        actions.append((frame_idx, action, ts))
+                        draw_label(frame, main_box, action, conf_val)
+                    else:
+                        cv2.rectangle(frame, (bx1, by1), (bx2, by2), (100, 100, 100), 1)
 
         out.write(frame)
         frame_idx += 1
 
-    events = deduplicate_actions(sorted(actions, key=lambda x: x[0]))
-
     cap.release()
     out.release()
-
+    
+    events = deduplicate_actions(sorted(actions, key=lambda x: x[0]))
+    with open(OUTPUT_PATH.replace(".mp4", "_events.json"), "w") as f:
+        json.dump(events, f, indent=2)
     return events
 
-def save_inference_samples(cap, player_model, num_samples=16, output_path="output/inference_samples2.png"):
-    import matplotlib.pyplot as plt
-    import matplotlib.gridspec as gridspec
-    import numpy as np
-
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    samples = []  # (raw_crop_rgb, transformed_tensor, action_label, confidence)
-
-    frame_indices = [int(i * total_frames / (num_samples * 3)) for i in range(num_samples * 3)]
-
-    for fi in frame_indices:
-        if len(samples) >= num_samples:
-            break
-
-        cap.set(cv2.CAP_PROP_POS_FRAMES, fi)
-        ret, frame = cap.read()
-        if not ret:
-            continue
-
-        results = player_model(frame, conf=CONF, iou=IOU, verbose=False)
-        for r in results:
-            if len(samples) >= num_samples:
-                break
-            for box in r.boxes.xyxy.cpu():
-                x1, y1, x2, y2 = map(int, box)
-                w, h = x2 - x1, y2 - y1
-                if w < MIN_W or h < MIN_H:
-                    continue
-
-                # Raw crop (what YOLO gives us)
-                crop_bgr = frame[y1:y2, x1:x2]
-                crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
-
-                # Transformed (what the CNN sees)
-                tensor = val_transform(crop_rgb).unsqueeze(0)
-
-                # Get prediction
-                tensor_dev = tensor.to(DEVICE)
-                with torch.no_grad():
-                    logits = _action_model(tensor_dev)
-                    probs = torch.softmax(logits, dim=1)
-                    conf, pred = torch.max(probs, dim=1)
-
-                label = ACTION_CLASSES[pred.item()]
-                confidence = conf.item()
-
-                samples.append((crop_rgb, tensor.squeeze(0), label, confidence))
-                break  # one crop per frame
-
-    # Plot
-    n = len(samples)
-    fig, axes = plt.subplots(n, 2, figsize=(6, n * 2.5))
-    fig.suptitle("Left: Raw YOLO Crop | Right: After val_transform (CNN input)", fontsize=11, y=1.01)
-
-    for i, (raw, transformed, label, conf) in enumerate(samples):
-        # Raw crop - just resize for display
-        # UPDATED: Matches the new 146x32 aspect ratio
-        raw_resized = cv2.resize(raw, (32, 146))
-        axes[i, 0].imshow(raw_resized)
-        axes[i, 0].set_title(f"Raw crop\n{raw.shape[1]}x{raw.shape[0]}", fontsize=7)
-        axes[i, 0].axis("off")
-
-        # Transformed - undo normalization for display
-        mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
-        std  = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
-        display = (transformed * std + mean).clamp(0, 1)
-        display = display.permute(1, 2, 0).numpy()
-
-        axes[i, 1].imshow(display)
-        # UPDATED: Title string matches new dimensions
-        axes[i, 1].set_title(f"CNN input (146x32)\n{label} {conf:.2f}", fontsize=7)
-        axes[i, 1].axis("off")
-
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close()
-    print(f"Saved inference samples → {output_path}")
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # reset cap for main inference
-
-def analyze_crop_dimensions(player_model, max_crops=2000):
-    import numpy as np
-
-    cap_local = cv2.VideoCapture(INPUT_PATH)  # open fresh cap
-    if not cap_local.isOpened():
-        raise ValueError(f"Cannot open video: {INPUT_PATH}")
-
-    widths, heights, aspect_ratios = [], [], []
-    collected = 0
-
-    while True:
-        if collected >= max_crops:
-            break
-
-        ret, frame = cap_local.read()
-        if not ret:
-            break
-
-        results = player_model(
-            frame,
-            conf=0.3,
-            iou=IOU,
-            classes=[0],
-            verbose=False
-        )
-
-        for r in results:
-            for box in r.boxes.xyxy.cpu():
-                x1, y1, x2, y2 = map(int, box)
-                w = x2 - x1
-                h = y2 - y1
-                widths.append(w)
-                heights.append(h)
-                aspect_ratios.append(h / w)
-                collected += 1
-                if collected >= max_crops:
-                    break
-
-    cap_local.release()  # close local cap when done
-
-    widths = np.array(widths)
-    heights = np.array(heights)
-    aspect_ratios = np.array(aspect_ratios)
-
-    def stats(arr):
-        if len(arr) == 0:
-            return "EMPTY"
-        return {
-            "mean": float(np.mean(arr)),
-            "median": float(np.median(arr)),
-            "min": float(np.min(arr)),
-            "max": float(np.max(arr)),
-            "p25": float(np.percentile(arr, 25)),
-            "p75": float(np.percentile(arr, 75)),
-            "p90": float(np.percentile(arr, 90)),
-        }
-
-    print("\n=== CROP DIMENSION ANALYSIS ===")
-    print("samples:", len(widths))
-    print("\nWIDTH:", stats(widths))
-    print("\nHEIGHT:", stats(heights))
-    print("\nASPECT RATIO (h/w):", stats(aspect_ratios))
-
-    return {
-        "width": stats(widths),
-        "height": stats(heights),
-        "aspect_ratio": stats(aspect_ratios),
-    }
-
 if __name__ == "__main__":
-    save_inference_samples(cap, player_model, num_samples=20)
+    print("Starting Pose-Inference...")
     events = run_video_inference()
-    #print(events)
-    #analyze_crop_dimensions(player_model)
+    print(f"Done. Detected {len(events)} events.")

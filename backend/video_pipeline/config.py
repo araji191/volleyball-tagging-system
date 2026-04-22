@@ -1,25 +1,29 @@
 import torch
 
 # --- Device Configuration ---
-DEVICE = (
-    "cuda" if torch.cuda.is_available() else
-    "mps"  if torch.backends.mps.is_available() else
-    "cpu"
-)
+DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
 
 # --- Model Paths ---
-YOLO_MODEL_PATH = "model/weights/player_model.pt"
-CNN_MODEL_PATH = "model/weights/action_model.pt"
+YOLO_MODEL_PATH = "/Users/abiolaraji/Desktop/volleyball-tagging-system/backend/model/weights/yolov8x-pose.pt"
+POSE_CLASSIFIER_PATH = "/Users/abiolaraji/Desktop/volleyball-tagging-system/backend/model/weights/pose_classifier_best.pt"
 
 # --- Inference Thresholds ---
-CONF = 0.5
-IOU = 0.5
-CONFIDENCE_THRESHOLD = 0.85 
+CONF = 0.5               # YOLO detection confidence
+IOU = 0.5                # YOLO NMS threshold
+CONFIDENCE_THRESHOLD = 0.50  # Classifier softmax threshold
+GAP_FRAMES = 15          # Deduplication window
 
-# --- Crop Dimensions ---
+# --- Crop/Box Dimensions ---
 MIN_W = 50
 MIN_H = 100
-CNN_INPUT_SIZE = (146, 32) 
 
 # --- Classes ---
-ACTION_CLASSES = ["spike", "set", "serve", "defense", "block"]
+CLASS_MAP = {
+    "spike":   0,
+    "defense": 1,
+    "block":   2,
+    "set":     3,
+    "serve":   4,
+}
+IDX_TO_CLASS = {v: k for k, v in CLASS_MAP.items()}
+ACTION_CLASSES = list(CLASS_MAP.keys())
