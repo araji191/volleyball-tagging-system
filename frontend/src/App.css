@@ -54,6 +54,7 @@
   gap: 40px;          /* Give elements space to exist independently */
   max-width: 900px;   /* Constraining width makes it much more readable */
   margin: 0 auto;
+  color: #FFF;
 }
 #next-steps {
   display: flex;
@@ -328,6 +329,10 @@ body {
   margin: 20px 0;
 }
 
+h3
+ {
+  color: #FFF;
+}
 
 @keyframes spin {
   0% { transform: rotate(0deg); }

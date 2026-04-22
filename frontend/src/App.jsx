@@ -66,7 +66,7 @@ function App() {
         {loading && (
           <div className="loader-box">
             <img src={volleyballIcon} className="spinner-image" alt="Loading..." />
-            <p>Our model is analyzing the frames... This may take a minute.</p>
+            <p>Processing video...</p>
           </div>
         )}
 
