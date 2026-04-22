@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import './App.css';
+import volleyballIcon from './assets/volleyball.jpg';
 
 function App() {
   const [file, setFile] = useState(null);
@@ -41,7 +42,7 @@ function App() {
   return (
     <div id="root">
       <section id="center">
-        <h1>Volleyball Action Tracker</h1>
+        <h1 className="karasuno-title">Volleyball Action Tracker</h1>
         <p>Upload a video to detect and tag player actions.</p>
 
         <div className="upload-container">
@@ -64,7 +65,7 @@ function App() {
 
         {loading && (
           <div className="loader-box">
-            <div className="spinner"></div>
+            <img src={volleyballIcon} className="spinner-image" alt="Loading..." />
             <p>Our model is analyzing the frames... This may take a minute.</p>
           </div>
         )}
