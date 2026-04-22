@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory, url_for
+from flask_cors import CORS
 import os
 import uuid
 from werkzeug.utils import secure_filename
@@ -7,6 +8,7 @@ from werkzeug.utils import secure_filename
 from video_pipeline.inference import run_video_inference
 
 app = Flask(__name__)
+CORS(app)
 
 # Create directories for temporary uploads and processed outputs
 UPLOAD_DIR = "temp_uploads"
@@ -17,7 +19,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 @app.route('/outputs/<filename>', methods=['GET'])
 def serve_video(filename):
     """Serves the generated output videos for download."""
-    return send_from_directory(OUTPUT_DIR, filename)
+    return send_from_directory(OUTPUT_DIR, filename, mimetype="video/mp4")
 
 @app.route('/api/v1/analyze', methods=['POST'])
 def analyze_video():
@@ -55,7 +57,8 @@ def analyze_video():
                 
         # 6. Generate the full download URL for the annotated video
         # request.host_url automatically captures your domain (e.g., http://localhost:5000/)
-        video_url = request.host_url.rstrip('/') + url_for('serve_video', filename=output_filename)
+        # Use ONLY url_for with _external=True. Flask handles the localhost:5000 part for you.
+        video_url = url_for('serve_video', filename=output_filename, _external=True)
         
         # 7. Return the combined JSON response
         return jsonify({

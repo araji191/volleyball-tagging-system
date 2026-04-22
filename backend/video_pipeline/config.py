@@ -1,11 +1,19 @@
 import torch
 
 # --- Device Configuration ---
-DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
+
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
+
+print(DEVICE)
 
 # --- Model Paths ---
-YOLO_MODEL_PATH = "/Users/abiolaraji/Desktop/volleyball-tagging-system/backend/model/weights/yolov8x-pose.pt"
-POSE_CLASSIFIER_PATH = "/Users/abiolaraji/Desktop/volleyball-tagging-system/backend/model/weights/pose_classifier_best.pt"
+YOLO_MODEL_PATH = r"C:\Users\dangp\OneDrive\Desktop\Coding\volleyball-tagging-system\backend\yolov8l-pose.pt"
+POSE_CLASSIFIER_PATH = r"C:\Users\dangp\OneDrive\Desktop\Coding\volleyball-tagging-system\backend\pose_classifier_best.pt"
 
 # --- Inference Thresholds ---
 CONF = 0.5               # YOLO detection confidence
