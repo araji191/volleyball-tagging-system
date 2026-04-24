@@ -1,3 +1,9 @@
+/**
+ * The main app component acts as the main entry point for the frontend application 
+ * to connect the backend to display the video inference
+ * 
+ * Authors: Abiola Raji, Patrick Dang
+ */
 import { useState } from 'react';
 import axios from 'axios';
 import './App.css';
