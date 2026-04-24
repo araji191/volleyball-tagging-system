@@ -1,121 +1,108 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+/**
+ * The main app component acts as the main entry point for the frontend application 
+ * to connect the backend to display the video inference
+ * 
+ * Authors: Abiola Raji, Patrick Dang
+ */
+import { useState } from 'react';
+import axios from 'axios';
+import './App.css';
+import volleyballIcon from './assets/volleyball.jpg';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+    setError(null);
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setError("Please select a video file first.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    const formData = new FormData();
+    formData.append('file', file); 
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/v1/analyze', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setResult(response.data);
+    } catch (err) {
+      setError(err.response?.data?.error || "An error occurred during inference.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <>
+    <div id="root">
       <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+        <h1 className="karasuno-title">Volleyball Action Tracker</h1>
+        <p>Upload a video to detect and tag player actions.</p>
+
+        <div className="upload-container">
+          <input 
+            type="file" 
+            accept="video/*" 
+            onChange={handleFileChange} 
+            className="file-input"
+          />
+          <button 
+            className="counter" 
+            onClick={handleUpload} 
+            disabled={loading}
+          >
+            {loading ? "Processing Video..." : "Run Inference"}
+          </button>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+
+        {error && <p style={{ color: '#ff4d4d' }}>{error}</p>}
+
+        {loading && (
+          <div className="loader-box">
+            <img src={volleyballIcon} className="spinner-image" alt="Loading..." />
+            <p>Processing video...</p>
+          </div>
+        )}
+
+        {result && (
+          <div className="results-grid">
+            <div className="video-section">
+              <h3>Annotated Video</h3>
+              <video controls src={result.video_url} className="output-video" />
+            </div>
+            
+            <div className="events-section">
+              <h3>Detected Actions</h3>
+              <div className="events-list">
+                {result.events.length > 0 ? (
+                  result.events.map((event, index) => (
+                    <div key={index} className="event-card">
+                      <span className="action-tag">{event.action}</span>
+                      <span className="timestamp">{event.start_ts}s - {event.end_ts}s</span>
+                    </div>
+                  ))
+                ) : (
+                  <p>No specific actions detected.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
