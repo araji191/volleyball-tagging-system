@@ -1,15 +1,15 @@
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Use the Karasuno 'Crow Black' and 'Volleyball Orange' */
-    --bg: #1b274d;         /* Deep off-black */
+
+    --bg: #1b274d;         
     --text-h: #FFFFFF;   
     --text: #D0D0D0;     
     
-    --accent: #FF5A00;     /* High-energy Karasuno Orange */
-    --accent-bg: rgba(255, 90, 0, 0.15); /* Transparent orange overlay */
-    --border: #3A3D42;     /* Subtle grey border for separation */
+    --accent: #FF5A00;    
+    --accent-bg: rgba(255, 90, 0, 0.15); 
+    --border: #3A3D42;  
 
-    /* Replace your default font with one that has geometric strength and energy */
+
     font-family: 'Poppins', 'Oswald', sans-serif;
 
     overflow-x: hidden;
@@ -72,4 +72,4 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
-}
+}}

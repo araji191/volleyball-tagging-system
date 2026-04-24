@@ -25,7 +25,7 @@ function App() {
     setResult(null);
 
     const formData = new FormData();
-    formData.append('file', file); // Matches your Flask request.files['file']
+    formData.append('file', file); 
 
     try {
       const response = await axios.post('http://localhost:5000/api/v1/analyze', formData, {

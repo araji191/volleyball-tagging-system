@@ -50,9 +50,9 @@
 }
 
 #center {
-  padding: 60px 20px; /* Increase vertical breathing room */
-  gap: 40px;          /* Give elements space to exist independently */
-  max-width: 900px;   /* Constraining width makes it much more readable */
+  padding: 60px 20px; 
+  gap: 40px;         
+  max-width: 900px;  
   margin: 0 auto;
   color: #FFF;
 }
@@ -235,7 +235,7 @@
 }
 
 .spinner-image {
-  width: 60px;               /* Adjust size to your liking */
+  width: 60px;              
   height: 60px;
   margin: 0 auto 15px;
   display: block;
@@ -243,11 +243,9 @@
 
   animation: spin 1s linear infinite;
   
-  /* Optional: Adds an orange glow to match the Haikyu vibe */
   filter: drop-shadow(0 0 10px var(--accent)); 
 }
 
-/* Ensure your spin keyframes are still there */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -259,20 +257,20 @@
   align-items: center;
   padding: 18px 24px;
   margin-bottom: 10px;
-  background: rgba(26, 28, 32, 0.7); /* Translucent off-black card */
+  background: rgba(26, 28, 32, 0.7);
   border: 1px solid var(--border);
-  border-radius: 12px; /* Uniform modular feel */
+  border-radius: 12px; 
   transition: all 0.2s ease;
 }
 
 .event-card:hover {
   border-color: var(--accent);
-  background: var(--accent-bg); /* Use the transparent orange hover */
+  background: var(--accent-bg);
   transform: translateY(-2px);
 }
 
 .action-tag {
-  color: var(--accent);       /* High-energy Orange */
+  color: var(--accent);       
   font-weight: 900;
   font-size: 1.1rem;
   text-transform: uppercase;
@@ -293,8 +291,8 @@
 
 body {
   background-image: 
-    linear-gradient(to bottom, var(--bg) 0%, rgba(12, 13, 16, 0.95) 100%), /* Creates dark overlay so text is readable */
-    url('./src/assets/bg_haikyu.png'); /* Replace with your background image */
+    linear-gradient(to bottom, var(--bg) 0%, rgba(12, 13, 16, 0.95) 100%), 
+    url('./src/assets/bg_haikyu.png'); 
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
@@ -312,18 +310,18 @@ body {
 }
 
 .karasuno-title {
-  font-family: 'Oswald', sans-serif; /* A thick, condensed font matches the logo best */
+  font-family: 'Oswald', sans-serif; 
   font-size: 5rem;
   font-weight: 900;
-  color: #1A1A1A; /* The deep black fill */
+  color: #1A1A1A; 
   text-transform: uppercase;
   
-  /* Layered Text Shadows to create the double stroke (White then Orange) */
-  text-shadow: 
-    -2px -2px 0 #FFF,  2px -2px 0 #FFF, -2px 2px 0 #FFF, 2px 2px 0 #FFF,   /* White inner border */
-    -5px -5px 0 #FF6600, 5px -5px 0 #FF6600, -5px 5px 0 #FF6600, 5px 5px 0 #FF6600; /* Orange outer border */
 
-  /* Adds that energetic "leant forward" look from the show */
+  text-shadow: 
+    -2px -2px 0 #FFF,  2px -2px 0 #FFF, -2px 2px 0 #FFF, 2px 2px 0 #FFF,  
+    -5px -5px 0 #FF6600, 5px -5px 0 #FF6600, -5px 5px 0 #FF6600, 5px 5px 0 #FF6600;
+
+
   transform: skewX(-5deg); 
   letter-spacing: -2px;
   margin: 20px 0;
