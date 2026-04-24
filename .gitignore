@@ -1,7 +1,11 @@
 VolleyballDataset/
+VolleyballDataset_clean/
+static_outputs/
+temp_uploads/
 videos/
 output/
 .vscode/
+keypoints_json/
 
 *.pt
 
