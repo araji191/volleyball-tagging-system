@@ -12,8 +12,8 @@ else:
 print(DEVICE)
 
 # --- Model Paths ---
-YOLO_MODEL_PATH = r"C:\Users\dangp\OneDrive\Desktop\Coding\volleyball-tagging-system\backend\yolov8l-pose.pt"
-POSE_CLASSIFIER_PATH = r"C:\Users\dangp\OneDrive\Desktop\Coding\volleyball-tagging-system\backend\pose_classifier_best.pt"
+YOLO_MODEL_PATH = r"C:\Users\User\Documents\CODE\volleyball-tagging-system\backend\model\weights\yolov8x-pose.pt"
+POSE_CLASSIFIER_PATH = r"C:\Users\User\Documents\CODE\volleyball-tagging-system\backend\model\weights\pose_classifier_best.pt"
 
 # --- Inference Thresholds ---
 CONF = 0.5               # YOLO detection confidence

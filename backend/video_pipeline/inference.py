@@ -121,7 +121,7 @@ def run_video_inference(input_path: str, output_path: str):
     
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     # Using 'mp4v' or 'avc1' depending on your system's codec support
-    fourcc = cv2.VideoWriter_fourcc(*"avc1")
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
 
     frame_idx = 0

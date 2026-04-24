@@ -10,6 +10,8 @@ from video_pipeline.inference import run_video_inference
 app = Flask(__name__)
 CORS(app)
 
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024 
+
 # Create directories for temporary uploads and processed outputs
 UPLOAD_DIR = "temp_uploads"
 OUTPUT_DIR = "static_outputs"
