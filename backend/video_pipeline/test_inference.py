@@ -1,9 +1,18 @@
+"""
+This module acts as a standalone test script to validate the end-to-end functionality of the video inference pipeline.
+it allows users to test the video inference pipeline on a sample video and outputs the processed video with detected actions and a JSON file with event timestamps.
+
+Authors: Abiola Raji, Patrick Dang
+
+"""
+
 import cv2
 import os
 import json
+import torch
 from video_pipeline.config import CONF, IOU, MIN_W, MIN_H
 from video_pipeline.inference import (
-    pose_model, classify_pose, extract_top_n_players,
+    pose_model, classify_pose, extract_keypoints_and_boxes, 
     draw_label, deduplicate_actions
 )
 
@@ -11,6 +20,14 @@ INPUT_PATH  = "./videos/rally.mp4"
 OUTPUT_PATH = "output/rally.mp4"
 
 def run_video_inference():
+    """
+    Executes entire project pipeline to produce action detections and timestamps from input video.
+
+    Args: none
+
+    Returns:
+        list: A list of dictionaries with keys: action, start_ts, end_ts, start_frame, end_frame.
+    """
     actions = []
     cap = cv2.VideoCapture(INPUT_PATH)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -28,13 +45,18 @@ def run_video_inference():
         results = pose_model(frame, conf=CONF, iou=IOU, classes=[0], verbose=False)
 
         for r in results:
-            for kp, box in extract_top_n_players(r, n=3):
+            kp, boxes = extract_keypoints_and_boxes(r)
+            if kp is not None:
                 action, conf_val = classify_pose(kp)
-                bx1, by1, bx2, by2 = box
+                # Filter for largest person box
+                areas = [(b[2]-b[0])*(b[3]-b[1]) for b in boxes]
+                main_box = boxes[int(torch.argmax(torch.tensor(areas)))]
+                
+                bx1, by1, bx2, by2 = main_box
                 if (bx2-bx1) >= MIN_W and (by2-by1) >= MIN_H:
                     if action:
                         actions.append((frame_idx, action, ts))
-                        draw_label(frame, box, action, conf_val)
+                        draw_label(frame, main_box, action, conf_val)
                     else:
                         cv2.rectangle(frame, (bx1, by1), (bx2, by2), (100, 100, 100), 1)
 
