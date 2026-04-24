@@ -12,6 +12,7 @@ CONF = 0.5               # YOLO detection confidence
 IOU = 0.5                # YOLO NMS threshold
 CONFIDENCE_THRESHOLD = 0.50  # Classifier softmax threshold
 GAP_FRAMES = 15          # Deduplication window
+TOP_N_PLAYERS = 3
 
 # --- Crop/Box Dimensions ---
 MIN_W = 50

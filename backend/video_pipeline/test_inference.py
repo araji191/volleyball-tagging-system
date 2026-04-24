@@ -1,10 +1,9 @@
 import cv2
 import os
 import json
-import torch
 from video_pipeline.config import CONF, IOU, MIN_W, MIN_H
 from video_pipeline.inference import (
-    pose_model, classify_pose, extract_keypoints_and_boxes, 
+    pose_model, classify_pose, extract_top_n_players,
     draw_label, deduplicate_actions
 )
 
@@ -29,18 +28,13 @@ def run_video_inference():
         results = pose_model(frame, conf=CONF, iou=IOU, classes=[0], verbose=False)
 
         for r in results:
-            kp, boxes = extract_keypoints_and_boxes(r)
-            if kp is not None:
+            for kp, box in extract_top_n_players(r, n=3):
                 action, conf_val = classify_pose(kp)
-                # Filter for largest person box
-                areas = [(b[2]-b[0])*(b[3]-b[1]) for b in boxes]
-                main_box = boxes[int(torch.argmax(torch.tensor(areas)))]
-                
-                bx1, by1, bx2, by2 = main_box
+                bx1, by1, bx2, by2 = box
                 if (bx2-bx1) >= MIN_W and (by2-by1) >= MIN_H:
                     if action:
                         actions.append((frame_idx, action, ts))
-                        draw_label(frame, main_box, action, conf_val)
+                        draw_label(frame, box, action, conf_val)
                     else:
                         cv2.rectangle(frame, (bx1, by1), (bx2, by2), (100, 100, 100), 1)
 

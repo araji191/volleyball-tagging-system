@@ -7,7 +7,7 @@ from ultralytics import YOLO
 from video_pipeline.config import (
     DEVICE, YOLO_MODEL_PATH, POSE_CLASSIFIER_PATH,
     CONF, IOU, CONFIDENCE_THRESHOLD, MIN_W, MIN_H,
-    IDX_TO_CLASS, GAP_FRAMES
+    IDX_TO_CLASS, GAP_FRAMES, TOP_N_PLAYERS
 )
 
 # --- MODEL DEFINITION ---
@@ -71,16 +71,15 @@ def classify_pose(keypoints_raw):
     except:
         return None, None
 
-def extract_keypoints_and_boxes(result):
+def extract_top_n_players(result, n=3):
+    """Returns keypoints and boxes for the N largest detected players."""
     if result.keypoints is None or len(result.keypoints.data) == 0:
-        return None, []
+        return []  # list of (kp, box) tuples
     kp = result.keypoints.data.cpu().numpy()
     boxes = result.boxes.xyxy.cpu().numpy().astype(int)
-    # Return kp for largest box and all boxes
-    if len(kp) > 1:
-        areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
-        return kp[areas.argmax()], boxes
-    return kp[0], boxes
+    areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    top_indices = np.argsort(areas)[::-1][:n]
+    return [(kp[i], boxes[i]) for i in top_indices]
 
 def draw_label(frame, box, label, conf, color=(0, 200, 80)):
     x1, y1, x2, y2 = box
@@ -136,23 +135,20 @@ def run_video_inference(input_path: str, output_path: str):
         results = pose_model(frame, conf=CONF, iou=IOU, classes=[0], verbose=False)
 
         for r in results:
-            # 2. Extract keypoints for classification and boxes for drawing
-            kp, boxes = extract_keypoints_and_boxes(r)
-            
-            if kp is not None:
+            # 2. Extract keypoints and boxes for the top N largest players
+            players = extract_top_n_players(r, n=TOP_N_PLAYERS)
+
+            for kp, box in players:
                 # 3. Classify the action based on pose
                 action, conf_val = classify_pose(kp)
-                
-                # Determine the main box (largest) to attach the label to
-                areas = [(b[2]-b[0])*(b[3]-b[1]) for b in boxes]
-                main_box = boxes[int(np.argmax(areas))]
-                bx1, by1, bx2, by2 = main_box
+
+                bx1, by1, bx2, by2 = box
 
                 # 4. Filter by size and confidence
                 if (bx2-bx1) >= MIN_W and (by2-by1) >= MIN_H:
                     if action:
                         actions.append((frame_idx, action, timestamp_sec))
-                        draw_label(frame, main_box, action, conf_val)
+                        draw_label(frame, box, action, conf_val)
                     else:
                         # Draw a simple box for detected players without a high-conf action
                         cv2.rectangle(frame, (bx1, by1), (bx2, by2), (100, 100, 100), 1)
