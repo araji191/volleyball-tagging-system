@@ -1,3 +1,10 @@
+"""
+This module contains the primary logic for transforming raw video output
+into classified volleyball actions with timestamps.
+
+Authors: Abiola Raji, Patrick Dang
+"""
+
 import os
 import cv2
 import torch
@@ -12,6 +19,9 @@ from video_pipeline.config import (
 
 # --- MODEL DEFINITION ---
 class PoseClassifier(nn.Module):
+    """
+    4 layer MLP (MLP) designed for volleyball action classifaction from keypoints 
+    """
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
@@ -23,6 +33,7 @@ class PoseClassifier(nn.Module):
     def forward(self, x): return self.net(x)
 
 # --- GLOBAL MODEL LOADING ---
+#Load model to specified path from config. 
 pose_model = YOLO(YOLO_MODEL_PATH)
 try:
     pose_model.to(DEVICE)
@@ -35,11 +46,29 @@ classifier.eval()
 
 # --- FEATURE ENGINEERING ---
 def get_angle(a, b, c):
+    """
+    Calculates the inner angele between points a b and c. 
+
+    Args:
+        a, b, c (np.array): 2D coordinates representing the joints. 
+                           'b' is the vertex of the angle.
+    Returns:
+        float: The angle in radians, clipped between 0 and Pi.
+
+    """
     ba, bc = a - b, c - b
     cos_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-6)
     return np.arccos(np.clip(cos_angle, -1.0, 1.0))
 
 def normalize_keypoints(kp):
+    """
+    Transforms yolo keypoints into a normalized feature vector for classification
+
+    Args:
+        kp (np.array): Raw keypoint data from YOLO.
+    Returns:
+        np.array: A 57-dimensional feature vector for the Pose Classifier.
+    """
     kp = np.array(kp)
     xy, conf = kp[:, :2].copy(), kp[:, 2:]
     xy[conf.squeeze() < 0.3] = 0
@@ -58,6 +87,14 @@ def normalize_keypoints(kp):
 
 # --- PROCESSING HELPERS ---
 def classify_pose(keypoints_raw):
+    """
+    Runs nomralized keypoints through classifier to get action label and confidence.
+
+    Args:
+        keypoints_raw (np.array): Raw keypoints for a single person detection.
+    Returns:
+        tuple: Returns (None, conf) if confidence is below the threshold.
+    """
     try:
         features = normalize_keypoints(keypoints_raw)
         tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(DEVICE)
@@ -72,6 +109,15 @@ def classify_pose(keypoints_raw):
         return None, None
 
 def extract_keypoints_and_boxes(result):
+    """
+    Parses Yolo inference results to extract bounding boxes and keypoints
+
+    if mulitple detections are presetent take the largest box.
+
+    Args: result object from yolo
+
+    Returns: tuple (keypoints for classification, bounding boxes)
+    """
     if result.keypoints is None or len(result.keypoints.data) == 0:
         return None, []
     kp = result.keypoints.data.cpu().numpy()
@@ -83,6 +129,17 @@ def extract_keypoints_and_boxes(result):
     return kp[0], boxes
 
 def draw_label(frame, box, label, conf, color=(0, 200, 80)):
+    """
+    Draws visual bounding boxes and action labels onto the video. 
+
+    Args:
+        frame (np.array): The current video frame.
+        box (list/np.array): Bounding box coordinates [x1, y1, x2, y2].
+        label (str): The predicted action name.
+        conf (float): The confidence score of the prediction.
+        color (tuple): colour for bounding box frame 
+
+    """
     x1, y1, x2, y2 = box
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
     if not label: return
@@ -92,6 +149,16 @@ def draw_label(frame, box, label, conf, color=(0, 200, 80)):
     cv2.putText(frame, text, (x1+5, y1-5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
 def deduplicate_actions(actions):
+    """
+    Groups frame level action cdetections into continious timed events. 
+
+    Uses a frame threshold to merge like frames into one action
+
+    Args:
+        actions (list): A list of tuples (frame_idx, action_label, timestamp) sorted by frame_idx.
+    Returns:
+        list: A list of dictionaries with keys: action, start_ts, end_ts, start_frame, end_frame.
+    """
     if not actions: return []
     events = []
     pf, pa, pts = actions[0]

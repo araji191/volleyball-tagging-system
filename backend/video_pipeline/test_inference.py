@@ -1,3 +1,11 @@
+"""
+This module acts as a standalone test script to validate the end-to-end functionality of the video inference pipeline.
+it allows users to test the video inference pipeline on a sample video and outputs the processed video with detected actions and a JSON file with event timestamps.
+
+Authors: Abiola Raji, Patrick Dang
+
+"""
+
 import cv2
 import os
 import json
@@ -12,6 +20,14 @@ INPUT_PATH  = "./videos/rally.mp4"
 OUTPUT_PATH = "output/rally.mp4"
 
 def run_video_inference():
+    """
+    Executes entire project pipeline to produce action detections and timestamps from input video.
+
+    Args: none
+
+    Returns:
+        list: A list of dictionaries with keys: action, start_ts, end_ts, start_frame, end_frame.
+    """
     actions = []
     cap = cv2.VideoCapture(INPUT_PATH)
     fps = cap.get(cv2.CAP_PROP_FPS)

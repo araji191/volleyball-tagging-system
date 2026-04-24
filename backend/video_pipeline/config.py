@@ -1,7 +1,14 @@
+"""
+This module centralizes all configuration settings for the video pose inference pipeline. 
+This is where device selection, model paths, and thresholds are defined.
+
+Authors: Abiola Raji, Patrick Dang 
+"""
+
 import torch
 
 # --- Device Configuration ---
-
+# Try Nvidia GPU first, then Apple MPS, then CPU
 if torch.cuda.is_available():
     DEVICE = "cuda"
 elif torch.backends.mps.is_available():
@@ -12,6 +19,9 @@ else:
 print(DEVICE)
 
 # --- Model Paths ---
+# To run update to your own paths should be downloaded off the google drive
+# YOLO_MODEL_PATH file name: yolov8x-pose.pt
+# POSE_CLASSIFIER_PATH file name: pose_classifier_best.pt
 YOLO_MODEL_PATH = r"C:\Users\User\Documents\CODE\volleyball-tagging-system\backend\model\weights\yolov8x-pose.pt"
 POSE_CLASSIFIER_PATH = r"C:\Users\User\Documents\CODE\volleyball-tagging-system\backend\model\weights\pose_classifier_best.pt"
 

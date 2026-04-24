@@ -18,9 +18,12 @@ BATCH_SIZE = 128
 EPOCHS = 200
 LR = 1e-3
 PATIENCE = 200
+
+# For Macbook 
 #DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
 
-# Try Apple GPU (MPS)
+
+#For invidia GPU
 if torch.cuda.is_available():
     DEVICE = "cuda"
 elif torch.backends.mps.is_available():
